@@ -187,6 +187,25 @@ Deux observations d'esprit critique :
   signature porte l'**identité du workflow** (`…/supply-chain.yml@refs/heads/main`) → on
   approche **L2**.
 
+**Preuve — exécution réelle en CI** (workflow `supply-chain`, run vert sur `main`). La signature
+keyless a été émise et **re-vérifiée dans le pipeline** (`cosign verify` + `verify-attestation`) :
+
+```
+Certificate issuer  : O=sigstore.dev, CN=sigstore-intermediate      ← Fulcio (AC Sigstore)
+Certificate subject : (vide — l'identité est dans le SAN)
+  SAN / OIDC        : https://token.actions.githubusercontent.com
+  identité workflow : …/supply-chain.yml@refs/heads/main
+Validité            : 11:13:12 → 11:23:12 UTC  (10 minutes → certificat éphémère)
+Rekor               : logIndex 2172688426  (journal de transparence public)
+  ✓ code-signing certificate verified using trusted CA (Fulcio)
+  ✓ existence in transparency log verified (Rekor)
+```
+
+Aucune clé privée n'est stockée : la clé éphémère est générée puis détruite ; seul le
+**certificat public** (contresigné par Fulcio, valable 10 min) et l'entrée **Rekor** subsistent —
+tous deux publics et auditables. C'est ce qui **prouve** le passage à une identité de build
+hébergée (≈ L2).
+
 **Ce qui reste contournable dans notre setup :**
 
 1. **Le build lui-même** n'est pas isolé : un mainteneur avec les droits peut modifier le
