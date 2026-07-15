@@ -19,6 +19,11 @@ permissions:
   packages: write        # pousser sur GHCR
   id-token: write        # OIDC → signature keyless (Fulcio/Rekor)
 
+# Ne pas annuler une signature/attestation en cours : on sérialise sans couper.
+concurrency:
+  group: supply-chain-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/scs-demo-app
 
@@ -109,6 +114,21 @@ jobs:
             --predicate provenance.json \
             --type slsaprovenance \
             "${{ steps.ref.outputs.ref }}"
+
+      # ---- Vérification (équivalent CI de `./scs.py verify`) : la CI prouve sa PROPRE sortie ----
+      # Keyless : on vérifie contre l'identité de CE workflow, pas une clé.
+      - name: Vérifier signature + attestations (keyless)
+        env:
+          IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/supply-chain.yml@${{ github.ref }}
+          ISSUER: https://token.actions.githubusercontent.com
+        run: |
+          REF="${{ steps.ref.outputs.ref }}"
+          cosign verify \
+            --certificate-identity "$IDENTITY" --certificate-oidc-issuer "$ISSUER" "$REF"
+          cosign verify-attestation --type spdxjson \
+            --certificate-identity "$IDENTITY" --certificate-oidc-issuer "$ISSUER" "$REF"
+          cosign verify-attestation --type slsaprovenance \
+            --certificate-identity "$IDENTITY" --certificate-oidc-issuer "$ISSUER" "$REF"
 
       - name: Récapitulatif
         run: |

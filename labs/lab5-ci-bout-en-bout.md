@@ -31,9 +31,25 @@ La politique d'admission n'exige donc plus une clé, mais **cette identité de w
 4. **scanne** (Grype) et **casse** si `CRITICAL` corrigeable ;
 5. installe **cosign 2.x** puis **signe** l'image en **keyless** (OIDC du runner) ;
 6. **attache** l'attestation **SBOM allégée** (`cosign attest --type spdxjson`) ;
-7. **attache** l'attestation de **provenance** (`--type slsaprovenance`).
+7. **attache** l'attestation de **provenance** (`--type slsaprovenance`) ;
+8. **vérifie sa propre sortie** : `cosign verify` + `verify-attestation` contre l'**identité du
+   workflow** (keyless). Le pipeline échoue s'il ne peut pas prouver ce qu'il vient de produire.
 
-Aucune clé privée n'est stockée.
+Aucune clé privée n'est stockée. Le workflow déclare le **moindre privilège**
+(`contents: read`, `packages: write`, `id-token: write`) et une clé `concurrency` qui sérialise
+les runs sans couper une signature en cours.
+
+## 5.1bis — CI du code + hygiène des dépendances
+
+Deux fichiers complètent la chaîne (indépendants du build/sign) :
+
+- [`../.github/workflows/ci.yml`](../.github/workflows/ci.yml) — à **chaque push/PR**, sans
+  secret : `pytest` sur l'app, compilation du package `supplychain/`, smoke test de la CLI, et un
+  **garde-fou** qui échoue si un user GHCR est codé en dur (le projet impose `${GHCR_USER}`).
+- [`../.github/dependabot.yml`](../.github/dependabot.yml) — met à jour chaque semaine les
+  **GitHub Actions** et les **dépendances Python** : les actions et les libs sont elles-mêmes des
+  dépendances tierces (menace T2 du threat model). C'est de l'hygiène supply-chain sur *notre*
+  propre chaîne.
 
 ## 5.2 Activer le workflow sur votre fork
 
