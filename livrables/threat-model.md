@@ -29,7 +29,7 @@ partir du code revu, par notre chaîne, sans altération. Propriétés visées :
 | T4 | **Origine inconnue** (pas de traçabilité) | absence de provenance | attestation de **provenance** SLSA exigée à l'admission | Attaque 5 (`no matching attestations`) | **Forte** | provenance déclarative (build non isolé) |
 | T5 | **Substitution silencieuse** via tag mutable | `:latest` | interdiction `:latest` + déploiement **par digest** | Attaque 4 (`MANIFEST_UNKNOWN`) | **Forte** | — |
 | T6 | **Registry pirate / typosquat** | image externe | politique `allowed-registries` (ghcr.io/notre-user seul) | Attaque 3 (`seules les images de ghcr.io/… autorisées`) | **Forte** | — |
-| T7 | **CI / runner compromis** | action tierce ou étape CI malveillante | signature **keyless** liée à l'identité du workflow (Rekor) + **auto-vérification** du pipeline (`cosign verify` en fin de run) + **Dependabot** (Actions & deps à jour) + permissions **moindre privilège** | workflows `supply-chain.yml` / `ci.yml` + `dependabot.yml` (référence) | **Moyenne** | build non isolé (L3), mainteneur malveillant |
+| T7 | **CI / runner compromis** | action tierce ou étape CI malveillante | signature **keyless** liée à l'identité du workflow (Rekor) + **auto-vérification** du pipeline (`cosign verify` en fin de run) + verrou **`main` uniquement** + **Dependabot** (Actions & deps à jour) + permissions **moindre privilège** | run CI vert : cert Fulcio + **Rekor** `logIndex 2172688426` | **Moyenne** | build non isolé (L3), mainteneur malveillant |
 
 **Défense en profondeur constatée :** une image `:latest` (T5) est en pratique refusée
 **d'abord** par la couche signature (elle n'existe pas / n'est pas signée), avant que

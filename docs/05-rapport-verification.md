@@ -49,7 +49,8 @@ depuis zéro (avec `GHCR_USER` exporté) : `./scs.py all --host-port 18080 --cos
 
 **Réalisé au-delà du local :** Lab 5 **CI/CD** (`.github/workflows/{supply-chain,ci}.yml`),
 signature **keyless** en CI (+ politique `03-verify-signature-keyless.yaml`), **Dependabot**,
-et livrables **rapport** + **threat model** remplis avec sorties réelles.
+et livrables **rapport** + **threat model** remplis avec sorties réelles. Le pipeline keyless
+est **prouvé vert** sur `main` (certificat Fulcio éphémère + entrée **Rekor** `logIndex 2172688426`).
 **Hors périmètre restant :** SBOM CycloneDX, vidéo de démo. Détail en §6.
 
 ---
@@ -198,7 +199,7 @@ Détail pédagogique complet : [`04-depannage-local.md`](04-depannage-local.md) 
 | Élément | État | Détail |
 |---|---|---|
 | **Lab 5 — CI/CD GitHub Actions** | ✅ **fait** | `supply-chain.yml` (build→scan→sign→attest→**verify** keyless) + `ci.yml` (pytest app + compile/smoke tooling + garde-fou user codé en dur). Pousser sur le fork pour l'exécuter. |
-| Signature **keyless** (OIDC/Fulcio/Rekor) | ✅ **fournie** (CI) | `cosign sign` sans `--key` dans le workflow + politique `policies/kyverno/03-verify-signature-keyless.yaml` (identité du workflow). En **local**, on reste par clé (choix « GHCR + par clé »). |
+| Signature **keyless** (OIDC/Fulcio/Rekor) | ✅ **prouvée** (CI) | `cosign sign` sans `--key` dans le workflow + politique `policies/kyverno/03-verify-signature-keyless.yaml`. Run `supply-chain` vert sur `main` : cert **Fulcio** (`CN=sigstore-intermediate`, validité **10 min**), identité `…/supply-chain.yml@refs/heads/main`, **Rekor** `logIndex 2172688426`, ré-vérifié dans le pipeline. En **local**, on reste par clé (choix « GHCR + par clé »). |
 | **Dependabot** | ✅ **fait** | `.github/dependabot.yml` : maj hebdo des GitHub Actions + deps pip (hygiène supply-chain). |
 | **Rapport** (L2) + **threat model** (L3) | ✅ **faits** | `livrables/rapport.md` et `livrables/threat-model.md`, remplis avec les sorties réelles du POC. |
 | SBOM **CycloneDX** | ⚪ restant | Critère Lab 1 = « SPDX **et/ou** CycloneDX » → SPDX suffit. `syft … -o cyclonedx-json` pour l'ajouter. |
