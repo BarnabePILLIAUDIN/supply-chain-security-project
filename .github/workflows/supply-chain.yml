@@ -24,9 +24,6 @@ concurrency:
   group: supply-chain-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  IMAGE: ghcr.io/${{ github.repository_owner }}/scs-demo-app
-
 jobs:
   build-sign-attest:
     runs-on: ubuntu-latest
@@ -37,6 +34,13 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
+
+      # GHCR exige un nom de dépôt en MINUSCULES ; le propriétaire GitHub peut contenir des majuscules.
+      - name: Nom d'image en minuscules
+        id: vars
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: echo "image=ghcr.io/${OWNER,,}/scs-demo-app" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -51,11 +55,11 @@ jobs:
         with:
           context: ./app
           push: true
-          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          tags: ${{ steps.vars.outputs.image }}:${{ github.sha }}
 
       - name: Référence par digest
         id: ref
-        run: echo "ref=${{ env.IMAGE }}@${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
+        run: echo "ref=${{ steps.vars.outputs.image }}@${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
 
       # ---- SBOM ----
       - name: Install Syft
