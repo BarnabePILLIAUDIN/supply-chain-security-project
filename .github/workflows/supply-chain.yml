@@ -1,6 +1,12 @@
 # Pipeline supply-chain de référence (Lab 5).
-# build → SBOM → scan → push → sign (keyless) → attest (SBOM + provenance).
+# build → SBOM → scan → push → sign (keyless) → attest (SBOM allégé + provenance).
 # Signature KEYLESS : aucune clé stockée, l'identité est celle de CE workflow (OIDC).
+#
+# ⚠️ Deux contraintes alignées sur la voie locale (voir docs/04-depannage-local.md) :
+#   §1 — cosign 2.x IMPÉRATIF : la 3.x écrit signatures/attestations via l'OCI referrers
+#        API, que Kyverno 1.18 ne sait pas lire (« no signatures found »). On épingle 2.x.
+#   §2 — on atteste un SBOM AU NIVEAU PAQUETS (< 2 Mio) : un SBOM complet dépasse la limite
+#        de contexte codée en dur (2 Mio) de Kyverno et fait échouer require-provenance.
 name: supply-chain
 
 on:
@@ -13,12 +19,22 @@ permissions:
   packages: write        # pousser sur GHCR
   id-token: write        # OIDC → signature keyless (Fulcio/Rekor)
 
+# Ne pas annuler une signature/attestation en cours : on sérialise sans couper.
+concurrency:
+  group: supply-chain-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/scs-demo-app
 
 jobs:
   build-sign-attest:
     runs-on: ubuntu-latest
+    # SEULE 'main' produit une image déployable. Défense en profondeur :
+    #  1) ici, le job ne build/signe QUE sur main (bloque un workflow_dispatch sur une autre branche) ;
+    #  2) à l'admission, Kyverno exige le subject '…@refs/heads/main' (03-verify-signature-keyless.yaml).
+    # Une image signée depuis une autre branche aurait un subject '@refs/heads/<branche>' → refusée au deploy.
+    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
 
@@ -56,17 +72,29 @@ jobs:
           severity-cutoff: critical
           only-fixed: true
 
-      # ---- Signature keyless ----
-      - name: Install cosign
+      # ---- cosign 2.x (voir en-tête §1) ----
+      - name: Install cosign 2.x
         uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: v2.6.3
+
+      # ---- Signature keyless ----
       - name: Sign image (keyless)
         run: cosign sign --yes "${{ steps.ref.outputs.ref }}"
 
-      # ---- Attestation SBOM ----
-      - name: Attest SBOM
+      # ---- SBOM allégé (< 2 Mio) pour l'attestation (voir en-tête §2) ----
+      # Le SBOM complet reste l'artefact d'inspection ; on n'ATTESTE que la vue paquets.
+      - name: SBOM allégé (retire la section files)
+        run: |
+          jq 'del(.files) | .relationships |= map(select(
+            (.spdxElementId       | startswith("SPDXRef-File-") | not) and
+            (.relatedSpdxElement  | startswith("SPDXRef-File-") | not)))' \
+            sbom.spdx.json > sbom.att.spdx.json
+
+      - name: Attest SBOM (allégé)
         run: |
           cosign attest --yes \
-            --predicate sbom.spdx.json \
+            --predicate sbom.att.spdx.json \
             --type spdxjson \
             "${{ steps.ref.outputs.ref }}"
 
@@ -92,10 +120,28 @@ jobs:
             --type slsaprovenance \
             "${{ steps.ref.outputs.ref }}"
 
+      # ---- Vérification (équivalent CI de `./scs.py verify`) : la CI prouve sa PROPRE sortie ----
+      # Keyless : on vérifie contre l'identité de CE workflow, pas une clé.
+      - name: Vérifier signature + attestations (keyless)
+        env:
+          IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/supply-chain.yml@${{ github.ref }}
+          ISSUER: https://token.actions.githubusercontent.com
+        run: |
+          REF="${{ steps.ref.outputs.ref }}"
+          cosign verify \
+            --certificate-identity "$IDENTITY" --certificate-oidc-issuer "$ISSUER" "$REF"
+          cosign verify-attestation --type spdxjson \
+            --certificate-identity "$IDENTITY" --certificate-oidc-issuer "$ISSUER" "$REF"
+          cosign verify-attestation --type slsaprovenance \
+            --certificate-identity "$IDENTITY" --certificate-oidc-issuer "$ISSUER" "$REF"
+
       - name: Récapitulatif
         run: |
           echo "### Image signée & attestée :computer:" >> "$GITHUB_STEP_SUMMARY"
           echo "\`${{ steps.ref.outputs.ref }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Rendre le package **public** une fois (Settings → Danger Zone) pour que le" >> "$GITHUB_STEP_SUMMARY"
+          echo "cluster puisse lire l'image et ses artefacts cosign. Voir docs/04 §4." >> "$GITHUB_STEP_SUMMARY"
 
 # NB : pour une provenance SLSA "officielle" (niveau supérieur), voir le générateur
 #      slsa-framework/slsa-github-generator (job séparé). Le bloc ci-dessus est volontairement

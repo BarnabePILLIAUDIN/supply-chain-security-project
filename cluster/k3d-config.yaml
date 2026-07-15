@@ -1,0 +1,15 @@
+# Cluster k3d local pour la démo — équivalent de kind-config.yaml.
+# Usage : k3d cluster create --config cluster/k3d-config.yaml
+#
+# Expose le NodePort 30080 (Service de l'app) sur localhost:8080, comme la voie kind.
+# La voie kind reste disponible via cluster/kind-config.yaml (au choix des étudiants).
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: scs
+servers: 1
+agents: 1
+ports:
+  - port: 8080:30080
+    nodeFilters:
+      - server:0

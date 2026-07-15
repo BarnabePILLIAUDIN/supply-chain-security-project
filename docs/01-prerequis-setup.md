@@ -32,13 +32,18 @@ Versions = minimum conseillé et testé ; des versions plus récentes conviennen
 | **kubectl** | Piloter le cluster | ≥ 1.29 | `kubectl version --client` |
 | **Syft** (Anchore) | Générer le SBOM | ≥ 1.0 | `syft version` |
 | **Grype** (Anchore) | Scanner le SBOM / l'image | ≥ 0.79 | `grype version` |
-| **cosign** (Sigstore) | Signer l'image + attestations | ≥ 2.2 | `cosign version` |
+| **cosign** (Sigstore) | Signer l'image + attestations | **2.x** (≥ 2.2, **pas** 3.x) | `cosign version` |
 | **Kyverno** (dans le cluster) | Moteur d'admission (installé au lab 3) | ≥ 1.12 | `kubectl get clusterpolicy` |
 | **Kyverno CLI** (optionnel) | Tester les politiques hors cluster | ≥ 1.12 | `kyverno version` |
 | **git** | Fork + versionnage | ≥ 2.40 | `git --version` |
 | **jq** | Lire les sorties JSON | ≥ 1.6 | `jq --version` |
 | **Compte GitHub** + **PAT** `write:packages` | Registry **GHCR** | — | cf. §4 |
 
+> ⚠️ **cosign 2.x, pas 3.x :** cosign 3.x stocke les signatures via l'OCI referrers API, que
+> le vérificateur de Kyverno 1.18 ne sait pas lire (« no signatures found »). Homebrew installe
+> la 3.x — récupérez un binaire 2.x (voir [`04-depannage-local.md`](04-depannage-local.md) §1).
+> Idem **k3d** : voie locale identique à `kind`, config dans `cluster/k3d-config.yaml`.
+>
 > **Registry :** on utilise **GHCR** (`ghcr.io/<votre-user>/...`), gratuit et déjà lié à votre
 > compte GitHub. Pas besoin de Docker Hub. **Helm** n'est pas requis en voie locale (Kyverno
 > s'installe via un simple manifeste, cf. lab 3) ; il l'est en voie Azure/AKS.

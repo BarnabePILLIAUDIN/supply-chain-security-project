@@ -8,6 +8,10 @@ provenance.json
 *.att
 *.sig
 
+# Sorties d'automatisation locale (digest, SBOM, manifs rendus) — régénérables
+.local/
+cosign.pub
+
 # Python
 app/.venv/
 __pycache__/
@@ -24,3 +28,6 @@ evaluation/qcm-corrige.md
 # Divers
 .env
 *.log
+
+# Binaire cosign 2.x téléchargé (régénérable)
+cosign2

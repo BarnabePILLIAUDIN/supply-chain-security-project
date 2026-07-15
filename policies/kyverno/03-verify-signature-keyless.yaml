@@ -1,0 +1,42 @@
+# Politique 3 (VARIANTE KEYLESS — Lab 5 / CI) — exiger une signature cosign KEYLESS
+# émise par CE workflow GitHub, et par lui seul.
+#
+# À utiliser À LA PLACE de 03-verify-signature.yaml (mode par clé), PAS en plus :
+# les deux ciblent la même image et se cumuleraient (il faudrait alors les DEUX
+# signatures). Voir labs/lab5-ci-bout-en-bout.md §5.3.
+#
+# Aucune clé publique ici : l'identité EST le workflow (OIDC Fulcio/Rekor). Un attaquant
+# ne peut pas se faire passer pour ce workflow — il n'a pas l'OIDC du runner GitHub.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-image-signature
+  annotations:
+    policies.kyverno.io/title: Vérifier la signature cosign (keyless)
+    policies.kyverno.io/category: Supply Chain Security
+    policies.kyverno.io/description: >-
+      Refuse toute image non signée par l'identité OIDC du workflow supply-chain.
+spec:
+  validationFailureAction: Enforce
+  background: false
+  webhookTimeoutSeconds: 30
+  rules:
+    - name: verifier-signature-keyless
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      verifyImages:
+        - imageReferences:
+            - "ghcr.io/${GHCR_USER}/scs-demo-app*"
+          mutateDigest: true          # réécrit le tag en digest (empêche la substitution)
+          verifyDigest: true
+          required: true
+          attestors:
+            - count: 1
+              entries:
+                - keyless:
+                    issuer: "https://token.actions.githubusercontent.com"
+                    subject: "https://github.com/${GHCR_USER}/supply-chain-security-project/.github/workflows/supply-chain.yml@refs/heads/main"
+                    rekor:
+                      url: "https://rekor.sigstore.dev"

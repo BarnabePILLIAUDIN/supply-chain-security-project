@@ -25,7 +25,7 @@ spec:
               kinds: [Pod]
       verifyImages:
         - imageReferences:
-            - "ghcr.io/<votre-user>/scs-demo-app*"
+            - "ghcr.io/${GHCR_USER}/scs-demo-app*"
           required: true
           attestations:
             - type: https://slsa.dev/provenance/v0.2

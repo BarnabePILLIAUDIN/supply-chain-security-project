@@ -61,7 +61,13 @@ La réponse de l'industrie : **SLSA**, **Sigstore/cosign**, **SBOM**, **attestat
 ```
 supply-chain-security-project/
 ├── README.md                    ← vous êtes ici
-├── docs/                        présentation, prérequis, planning, évaluation, architecture
+├── scs.py                       point d'entrée Python (délègue au package)
+├── supplychain/                 orchestrateur Python (un module par responsabilité)
+│   ├── config·shell             paramètres + primitives d'exécution
+│   ├── image·sbom·signing       labs 0–2 (build/push · SBOM/scan · sign/attest)
+│   ├── manifests·cluster        rendu .local/ · k3d/Kyverno/policies/deploy (lab 3)
+│   └── attacks·verify·pipeline·cli  lab 4 · preuves cosign · chaîne complète · CLI
+├── docs/                        présentation, prérequis, planning, évaluation, architecture, dépannage
 ├── app/                         application fournie (API Flask) — le sujet, c'est la chaîne autour
 ├── labs/                        les 5 labs guidés (le cœur des 1,5 jour)
 │   ├── lab0-setup.md
@@ -84,6 +90,32 @@ supply-chain-security-project/
 2. Installez les outils : [`docs/01-prerequis-setup.md`](docs/01-prerequis-setup.md).
 3. Enchaînez les labs [`labs/lab0-setup.md`](labs/lab0-setup.md) → `lab4`.
 4. Préparez vos [livrables](docs/03-livrables-evaluation.md) et votre démo.
+
+## Raccourci : tout lancer en une commande
+
+L'orchestrateur Python **`scs.py`** (stdlib uniquement, voie **k3d** + cosign par clé) automatise
+les labs 0→4. Après `docker login ghcr.io` :
+
+```bash
+./scs.py all     --host-port 8080 --cosign ./cosign2   # build→sign→attest→cluster→deploy
+./scs.py attacks                  --cosign ./cosign2   # démo de blocage (Lab 4)
+./scs.py scan-vuln                                     # Lab 1.4 : la gate casse
+./scs.py verify                   --cosign ./cosign2   # preuves cosign
+./scs.py clean                                         # supprime le cluster + .local/
+```
+
+> **User GHCR sans répéter `--user`** : exportez-le. Priorité **`--user` > `GHCR_USER` > `USER`**
+> (aucun nom codé en dur ; sans valeur, l'outil s'arrête avec un message clair).
+> ```bash
+> export GHCR_USER=<votre-user>   # ou : export USER=<votre-user>
+> ./scs.py all --host-port 8080 --cosign ./cosign2
+> ```
+> ⚠️ `$USER` = votre login shell (souvent ≠ votre compte GitHub) : si vous n'exportez rien,
+> c'est lui qui est pris. Exportez `GHCR_USER` explicitement, ou passez `--user`.
+
+Les politiques/manifs sont **rendus** (jamais modifiés) vers `.local/` (gitignoré) avec votre
+user, votre `cosign.pub` et votre digest. **Pièges connus + correctifs :**
+[`docs/04-depannage-local.md`](docs/04-depannage-local.md) (⚠️ **cosign 2.x requis**, pas 3.x).
 
 > **Voies d'exécution :** tout tourne **en local** (Docker + `kind` ou `k3s`), *aucun cloud requis*.
 > Une variante **Azure** (AKS + Azure Container Registry + politiques) est indiquée en encart pour

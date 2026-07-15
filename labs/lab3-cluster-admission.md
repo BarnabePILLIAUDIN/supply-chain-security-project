@@ -32,8 +32,10 @@ kubectl create namespace app
 
 ## 3.4 Appliquer les politiques
 
-Les politiques sont fournies dans [`../policies/kyverno/`](../policies/kyverno/). Lisez-les,
-**adaptez le registry et l'identité** à votre fork (variables `<votre-user>` dans les fichiers).
+Les politiques sont fournies dans [`../policies/kyverno/`](../policies/kyverno/). Lisez-les :
+le registry et la clé sont paramétrés par la **variable `${GHCR_USER}`** (et le bloc `cosign.pub`),
+substituée au rendu vers `.local/` — vous n'éditez pas ces fichiers, vous exportez `GHCR_USER`
+(ou `USER`) puis lancez `./scs.py render` (cf. `docs/04-depannage-local.md`).
 
 ```bash
 # 1) N'autoriser que votre registry GHCR

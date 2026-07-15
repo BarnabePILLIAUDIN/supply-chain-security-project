@@ -5,7 +5,7 @@
 #   (A) mode PAR CLÉ    → collez votre cosign.pub (Lab 2)
 #   (B) mode KEYLESS    → exigez l'identité du workflow GitHub (Lab 5)  [décommentez]
 #
-# ➜ Adaptez "ghcr.io/<votre-user>/scs-demo-app" et la clé / l'identité.
+# ➜ Adaptez "ghcr.io/${GHCR_USER}/scs-demo-app" et la clé / l'identité.
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
@@ -27,7 +27,7 @@ spec:
               kinds: [Pod]
       verifyImages:
         - imageReferences:
-            - "ghcr.io/<votre-user>/scs-demo-app*"
+            - "ghcr.io/${GHCR_USER}/scs-demo-app*"
           mutateDigest: true          # réécrit le tag en digest (empêche la substitution)
           verifyDigest: true
           required: true
@@ -47,6 +47,6 @@ spec:
           #     entries:
           #       - keyless:
           #           issuer: "https://token.actions.githubusercontent.com"
-          #           subject: "https://github.com/<votre-user>/supply-chain-security-project/.github/workflows/supply-chain.yml@refs/heads/main"
+          #           subject: "https://github.com/${GHCR_USER}/supply-chain-security-project/.github/workflows/supply-chain.yml@refs/heads/main"
           #           rekor:
           #             url: "https://rekor.sigstore.dev"

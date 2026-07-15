@@ -1,0 +1,52 @@
+# CI — valide le CODE à chaque push / PR (rapide, sans secret).
+# Complète supply-chain.yml (qui, lui, build/signe/atteste sur main).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Annule les runs obsolètes d'une même réf (économie de runners).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read        # moindre privilège : la CI ne fait que lire le dépôt
+
+jobs:
+  app-tests:
+    name: Tests app (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Installer les dépendances
+        run: pip install -r app/requirements.txt pytest
+      - name: pytest
+        working-directory: app
+        run: python -m pytest test_app.py -q
+
+  tooling:
+    name: Orchestrateur Python (compile + smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compilation de tous les modules (stdlib uniquement)
+        run: python -m py_compile scs.py supplychain/*.py
+      - name: Smoke test CLI (l'aide doit s'afficher)
+        run: python scs.py --help
+      - name: Garde-fou — aucun user codé en dur
+        # Le projet impose la variabilisation : personne ne doit apparaître en dur.
+        run: |
+          if grep -rInE 'ghcr\.io/[a-z0-9-]+/scs-demo-app' supplychain/ scs.py; then
+            echo "::error::user GHCR codé en dur détecté — utilisez \${GHCR_USER}."
+            exit 1
+          fi
+          echo "OK : aucun user codé en dur."

@@ -23,7 +23,9 @@ WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 COPY app.py .
 
-USER appuser
+# UID NUMÉRIQUE (pas le nom) : requis pour que Kubernetes puisse vérifier
+# `runAsNonRoot: true` — avec un nom d'utilisateur, l'admission refuse le Pod.
+USER 10001
 EXPOSE 8080
 
 # Healthcheck Docker (Kubernetes utilise en plus ses propres probes)
