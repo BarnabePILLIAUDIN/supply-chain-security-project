@@ -48,6 +48,16 @@ code ─► build ─► SBOM (Syft) ─► scan (Grype, gate) ─► sign (cosi
 > *referrers API*, que le vérificateur embarqué de Kyverno 1.18 ne sait pas lire. La 2.x écrit
 > l'ancien schéma par tag (`sha256-<digest>.sig` / `.att`) attendu par Kyverno.
 
+**Deux voies d'exécution** partagent la même chaîne :
+
+- **Locale** — l'orchestrateur `scs.py` (par clé, cluster k3d) : c'est le POC démontré ici.
+- **CI/CD** (`.github/workflows/`) — `supply-chain.yml` rejoue build→scan→sign→attest en
+  **keyless** (identité OIDC du workflow) puis **vérifie sa propre sortie**
+  (`cosign verify` + `verify-attestation`) ; `ci.yml` valide le code à chaque PR (pytest sur
+  l'app, compilation du package, garde-fou « aucun user codé en dur ») ; **Dependabot** met à
+  jour les Actions et les dépendances Python (les Actions sont elles-mêmes des dépendances — cf.
+  threat model T2).
+
 ## 3. Mise en œuvre
 
 Toute la chaîne est automatisée par un orchestrateur Python maison (`scs.py` + package

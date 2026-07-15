@@ -47,8 +47,10 @@ depuis zéro (avec `GHCR_USER` exporté) : `./scs.py all --host-port 18080 --cos
 | 8 | Env var **`USER`** exportable | Résolution `--user > $GHCR_USER > $USER` (Python, bash, Make) | ✅ §0 |
 | 9 | **Variabiliser** les politiques, aucun nom codé en dur | Token `${GHCR_USER}` dans les manifests ; `cedricgautier` retiré du code | ✅ §0/§7 |
 
-**Hors périmètre (choix explicites) :** signature *keyless*, CI GitHub (Lab 5 bonus),
-SBOM CycloneDX. Détail et justification en §6.
+**Réalisé au-delà du local :** Lab 5 **CI/CD** (`.github/workflows/{supply-chain,ci}.yml`),
+signature **keyless** en CI (+ politique `03-verify-signature-keyless.yaml`), **Dependabot**,
+et livrables **rapport** + **threat model** remplis avec sorties réelles.
+**Hors périmètre restant :** SBOM CycloneDX, vidéo de démo. Détail en §6.
 
 ---
 
@@ -191,14 +193,16 @@ Détail pédagogique complet : [`04-depannage-local.md`](04-depannage-local.md) 
 
 ---
 
-## 6. Hors périmètre (choix explicites, non bloquants)
+## 6. Extensions : état (fait / restant)
 
-| Élément | Pourquoi non fait | Pour l'activer |
+| Élément | État | Détail |
 |---|---|---|
-| Signature **keyless** (OIDC/Fulcio/Rekor) | Choix « GHCR + par clé » ; keyless exige un flux navigateur OIDC | bloc `keyless:` des politiques 03/04 + `cosign sign` sans `--key` |
-| **Lab 5 — CI GitHub Actions** | Bonus ; nécessite un push sur le fork + OIDC du runner | activer `.github/workflows/supply-chain.yml` sur le fork |
-| SBOM **CycloneDX** | Le critère Lab 1 est « SPDX **et/ou** CycloneDX » — SPDX suffit | `syft … -o cyclonedx-json` |
-| Vidéo / rapport / threat model | **Livrables étudiants**, hors « lancer en local » | templates dans `livrables/` |
+| **Lab 5 — CI/CD GitHub Actions** | ✅ **fait** | `supply-chain.yml` (build→scan→sign→attest→**verify** keyless) + `ci.yml` (pytest app + compile/smoke tooling + garde-fou user codé en dur). Pousser sur le fork pour l'exécuter. |
+| Signature **keyless** (OIDC/Fulcio/Rekor) | ✅ **fournie** (CI) | `cosign sign` sans `--key` dans le workflow + politique `policies/kyverno/03-verify-signature-keyless.yaml` (identité du workflow). En **local**, on reste par clé (choix « GHCR + par clé »). |
+| **Dependabot** | ✅ **fait** | `.github/dependabot.yml` : maj hebdo des GitHub Actions + deps pip (hygiène supply-chain). |
+| **Rapport** (L2) + **threat model** (L3) | ✅ **faits** | `livrables/rapport.md` et `livrables/threat-model.md`, remplis avec les sorties réelles du POC. |
+| SBOM **CycloneDX** | ⚪ restant | Critère Lab 1 = « SPDX **et/ou** CycloneDX » → SPDX suffit. `syft … -o cyclonedx-json` pour l'ajouter. |
+| **Vidéo** de démo | ⚪ restant | Livrable étudiant (capture d'écran/vidéo) ; les **sorties texte** réelles sont dans `livrables/rapport.md` §4. |
 
 ---
 
@@ -207,9 +211,13 @@ Détail pédagogique complet : [`04-depannage-local.md`](04-depannage-local.md) 
 **Créés (automatisation) :** `scs.py` (point d'entrée) + package **`supplychain/`** (config, shell,
 image, sbom, signing, manifests, cluster, attacks, verify, pipeline, cli) · `cluster/k3d-config.yaml` ·
 `docs/04-depannage-local.md` · `docs/05-rapport-verification.md`.
-**Modifiés (correctifs réels + variabilisation) :** `app/Dockerfile` · `k8s/deployment.yaml` ·
+**Créés (CI/CD) :** `.github/workflows/ci.yml` (tests + tooling) · `.github/dependabot.yml` ·
+`policies/kyverno/03-verify-signature-keyless.yaml` · `livrables/rapport.md` · `livrables/threat-model.md`.
+**Modifiés (correctifs réels + variabilisation + CI) :** `app/Dockerfile` · `k8s/deployment.yaml` ·
 `policies/kyverno/{01,03,04}*.yaml` (token **`${GHCR_USER}`** au lieu de `<votre-user>`) ·
-`.gitignore` · `README.md` · `docs/01-prerequis-setup.md` · `labs/lab3-cluster-admission.md`.
+`.github/workflows/supply-chain.yml` (cosign 2.x, SBOM allégé, verify keyless, concurrency) ·
+`labs/lab5-ci-bout-en-bout.md` · `.gitignore` · `README.md` · `docs/01-prerequis-setup.md` ·
+`labs/lab3-cluster-admission.md`.
 **Rendus vers `.local/` (gitignoré), jamais déployés depuis la source :** les 4 politiques + le
 deployment, avec `${GHCR_USER}`, `cosign.pub` et le digest substitués.
 **Binaire local (gitignoré, régénérable) :** `./cosign2` (cosign 2.x).
