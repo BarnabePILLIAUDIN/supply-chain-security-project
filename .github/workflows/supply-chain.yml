@@ -30,6 +30,11 @@ env:
 jobs:
   build-sign-attest:
     runs-on: ubuntu-latest
+    # SEULE 'main' produit une image déployable. Défense en profondeur :
+    #  1) ici, le job ne build/signe QUE sur main (bloque un workflow_dispatch sur une autre branche) ;
+    #  2) à l'admission, Kyverno exige le subject '…@refs/heads/main' (03-verify-signature-keyless.yaml).
+    # Une image signée depuis une autre branche aurait un subject '@refs/heads/<branche>' → refusée au deploy.
+    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
 

@@ -39,6 +39,12 @@ Aucune clé privée n'est stockée. Le workflow déclare le **moindre privilège
 (`contents: read`, `packages: write`, `id-token: write`) et une clé `concurrency` qui sérialise
 les runs sans couper une signature en cours.
 
+> **Seule `main` produit une image déployable.** Défense en profondeur sur deux niveaux :
+> le job ne build/signe **que si `github.ref == refs/heads/main`** (un `workflow_dispatch` sur une
+> autre branche ne fait rien), et **à l'admission** Kyverno exige le subject
+> `…/supply-chain.yml@refs/heads/main`. Une image signée depuis une autre branche porte
+> `@refs/heads/<branche>` dans son identité → **refusée au déploiement**.
+
 ## 5.1bis — CI du code + hygiène des dépendances
 
 Deux fichiers complètent la chaîne (indépendants du build/sign) :
