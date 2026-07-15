@@ -68,10 +68,13 @@ jobs:
         run: syft "${{ steps.ref.outputs.ref }}" -o spdx-json > sbom.spdx.json
 
       # ---- Scan : casse si CRITICAL corrigeable ----
+      # grype-version: latest — la version épinglée par défaut de l'action (v0.80.0) charge une
+      # base de vulnérabilités périmée ("built 18 weeks ago, max age 5 days") et échoue à tort.
       - name: Scan (Grype) — gate sur CRITICAL
         uses: anchore/scan-action@v4
         with:
           image: ${{ steps.ref.outputs.ref }}
+          grype-version: latest
           fail-build: true
           severity-cutoff: critical
           only-fixed: true
